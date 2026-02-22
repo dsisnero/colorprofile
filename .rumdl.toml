@@ -1,0 +1,33 @@
+# rumdl configuration file
+
+# Global configuration options
+[global]
+# List of rules to disable
+# disable = ["MD013", "MD033"]
+
+# List of file/directory patterns to exclude from linting
+exclude = [
+    ".git",
+    ".github",
+    "node_modules",
+    "vendor",
+    "lib",
+    "temp",
+    "build",
+    "CHANGELOG.md",
+    "LICENSE.md",
+]
+
+# Respect .gitignore files when scanning directories (default: true)
+respect-gitignore = true
+
+[MD013]
+# Set line length
+line-length = 80
+# Enable automatic text reflow/wrapping for paragraphs
+reflow = true
+# Configure what elements to check
+code-blocks = true
+tables = false
+headings = true
+paragraphs = true

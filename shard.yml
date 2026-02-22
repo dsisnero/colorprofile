@@ -1,0 +1,18 @@
+name: colorprofile
+version: 0.1.0
+
+authors:
+  - Dominic Sisneros <dsisnero@gmail.com>
+
+crystal: '>= 1.19.1'
+
+license: MIT
+
+dependencies:
+  ansi:
+    github: dsisnero/ansi
+
+development_dependencies:
+  ameba:
+    github: crystal-ameba/ameba
+    version: ~> 1.6
