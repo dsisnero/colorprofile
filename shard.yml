@@ -11,8 +11,8 @@ license: MIT
 dependencies:
   ansi:
     github: dsisnero/ansi
-  term-terminfo:
-    github: crystal-term/terminfo
+  terminfo:
+    github: docelic/terminfo
 
 development_dependencies:
   ameba:

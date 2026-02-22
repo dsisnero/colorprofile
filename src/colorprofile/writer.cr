@@ -48,7 +48,7 @@ module Colorprofile
         parser.reset
         seq, _, read, new_state = Ansi.decode_sequence(bytes[pos..-1], state, parser)
 
-        if Ansi.has_csi_prefix?(seq) && parser.command == 'm'
+        if Ansi.has_csi_prefix?(seq) && parser.command == 'm'.ord
           handle_sgr(parser, buffer)
         else
           # If we're not a style SGR sequence, just write the bytes.
@@ -66,11 +66,11 @@ module Colorprofile
 
     private def handle_sgr(parser : Ansi::Parser, buffer : IO::Memory)
       style_attrs = [] of String
-      params = parser.params
+      params_len = parser.params_len
 
       i = 0
-      while i < params.size
-        p = params[i]
+      while i < params_len
+        p, _ = parser.param(i, 0)
 
         case p
         when 0
@@ -91,30 +91,32 @@ module Colorprofile
             next
           end
           # Parse 256 or true color from params
-          if i + 1 < params.size
-            color_type = params[i + 1]
+          if i + 1 < params_len
+            color_type = parser.param(i + 1, 0)[0]
             case color_type
             when 5 # 256 color
-              if i + 2 < params.size
-                color_val = params[i + 2]
+              if i + 2 < params_len
+                color_val = parser.param(i + 2, 0)[0]
                 color = Ansi::IndexedColor.new(color_val.to_u8)
                 converted = @profile.convert(color)
                 if converted
                   style_attrs << color_to_sgr(converted, :foreground)
                 end
                 i += 2
+                next
               end
             when 2 # True color (RGB)
-              if i + 4 < params.size
-                r = params[i + 2]
-                g = params[i + 3]
-                b = params[i + 4]
+              if i + 4 < params_len
+                r = parser.param(i + 2, 0)[0]
+                g = parser.param(i + 3, 0)[0]
+                b = parser.param(i + 4, 0)[0]
                 color = Ansi::Color.new(r.to_u8, g.to_u8, b.to_u8)
                 converted = @profile.convert(color)
                 if converted
                   style_attrs << color_to_sgr(converted, :foreground)
                 end
                 i += 4
+                next
               end
             end
           end
@@ -139,12 +141,12 @@ module Colorprofile
             next
           end
           # Parse 256 or true color from params
-          if i + 1 < params.size
-            color_type = params[i + 1]
+          if i + 1 < params_len
+            color_type = parser.param(i + 1, 0)[0]
             case color_type
             when 5 # 256 color
-              if i + 2 < params.size
-                color_val = params[i + 2]
+              if i + 2 < params_len
+                color_val = parser.param(i + 2, 0)[0]
                 color = Ansi::IndexedColor.new(color_val.to_u8)
                 converted = @profile.convert(color)
                 if converted
@@ -153,10 +155,10 @@ module Colorprofile
                 i += 2
               end
             when 2 # True color (RGB)
-              if i + 4 < params.size
-                r = params[i + 2]
-                g = params[i + 3]
-                b = params[i + 4]
+              if i + 4 < params_len
+                r = parser.param(i + 2, 0)[0]
+                g = parser.param(i + 3, 0)[0]
+                b = parser.param(i + 4, 0)[0]
                 color = Ansi::Color.new(r.to_u8, g.to_u8, b.to_u8)
                 converted = @profile.convert(color)
                 if converted
@@ -178,12 +180,12 @@ module Colorprofile
             next
           end
           # Parse 256 or true color from params
-          if i + 1 < params.size
-            color_type = params[i + 1]
+          if i + 1 < params_len
+            color_type = parser.param(i + 1, 0)[0]
             case color_type
             when 5 # 256 color
-              if i + 2 < params.size
-                color_val = params[i + 2]
+              if i + 2 < params_len
+                color_val = parser.param(i + 2, 0)[0]
                 color = Ansi::IndexedColor.new(color_val.to_u8)
                 converted = @profile.convert(color)
                 if converted
@@ -192,10 +194,10 @@ module Colorprofile
                 i += 2
               end
             when 2 # True color (RGB)
-              if i + 4 < params.size
-                r = params[i + 2]
-                g = params[i + 3]
-                b = params[i + 4]
+              if i + 4 < params_len
+                r = parser.param(i + 2, 0)[0]
+                g = parser.param(i + 3, 0)[0]
+                b = parser.param(i + 4, 0)[0]
                 color = Ansi::Color.new(r.to_u8, g.to_u8, b.to_u8)
                 converted = @profile.convert(color)
                 if converted

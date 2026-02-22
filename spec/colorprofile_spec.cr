@@ -209,5 +209,156 @@ describe Colorprofile do
       writer.write_string("Hello")
       io.to_s.should eq "Hello"
     end
+
+    # Test cases from vendor/writer_test.go
+    writers = {
+      Colorprofile::Profile::TrueColor => ->(io : IO) { Colorprofile::Writer.new(io, Colorprofile::Profile::TrueColor) },
+      Colorprofile::Profile::ANSI256   => ->(io : IO) { Colorprofile::Writer.new(io, Colorprofile::Profile::ANSI256) },
+      Colorprofile::Profile::ANSI      => ->(io : IO) { Colorprofile::Writer.new(io, Colorprofile::Profile::ANSI) },
+      Colorprofile::Profile::ASCII     => ->(io : IO) { Colorprofile::Writer.new(io, Colorprofile::Profile::ASCII) },
+      Colorprofile::Profile::NoTTY     => ->(io : IO) { Colorprofile::Writer.new(io, Colorprofile::Profile::NoTTY) },
+    }
+
+    writer_cases = [
+      {
+        name:               "empty",
+        input:              "",
+        expected_truecolor: "",
+        expected_ansi256:   "",
+        expected_ansi:      "",
+        expected_ascii:     "",
+      },
+      {
+        name:               "no styles",
+        input:              "hello world",
+        expected_truecolor: "hello world",
+        expected_ansi256:   "hello world",
+        expected_ansi:      "hello world",
+        expected_ascii:     "hello world",
+      },
+      {
+        name:               "simple style attributes",
+        input:              "hello \e[1mworld\e[m",
+        expected_truecolor: "hello \e[1mworld\e[m",
+        expected_ansi256:   "hello \e[1mworld\e[m",
+        expected_ansi:      "hello \e[1mworld\e[m",
+        expected_ascii:     "hello \e[1mworld\e[m",
+      },
+      {
+        name:               "simple ansi color fg",
+        input:              "hello \e[31mworld\e[m",
+        expected_truecolor: "hello \e[31mworld\e[m",
+        expected_ansi256:   "hello \e[31mworld\e[m",
+        expected_ansi:      "hello \e[31mworld\e[m",
+        expected_ascii:     "hello \e[mworld\e[m",
+      },
+      {
+        name:               "default fg color after ansi color",
+        input:              "\e[31mhello \e[39mworld\e[m",
+        expected_truecolor: "\e[31mhello \e[39mworld\e[m",
+        expected_ansi256:   "\e[31mhello \e[39mworld\e[m",
+        expected_ansi:      "\e[31mhello \e[39mworld\e[m",
+        expected_ascii:     "\e[mhello \e[mworld\e[m",
+      },
+      {
+        name:               "ansi color fg and bg",
+        input:              "\e[31;42mhello world\e[m",
+        expected_truecolor: "\e[31;42mhello world\e[m",
+        expected_ansi256:   "\e[31;42mhello world\e[m",
+        expected_ansi:      "\e[31;42mhello world\e[m",
+        expected_ascii:     "\e[mhello world\e[m",
+      },
+      {
+        name:               "bright ansi color fg and bg",
+        input:              "\e[91;102mhello world\e[m",
+        expected_truecolor: "\e[91;102mhello world\e[m",
+        expected_ansi256:   "\e[91;102mhello world\e[m",
+        expected_ansi:      "\e[91;102mhello world\e[m",
+        expected_ascii:     "\e[mhello world\e[m",
+      },
+      {
+        name:               "simple 256 color fg",
+        input:              "hello \e[38;5;196mworld\e[m",
+        expected_truecolor: "hello \e[38;5;196mworld\e[m",
+        expected_ansi256:   "hello \e[38;5;196mworld\e[m",
+        expected_ansi:      "hello \e[91mworld\e[m",
+        expected_ascii:     "hello \e[mworld\e[m",
+      },
+      {
+        name:               "256 color bg",
+        input:              "\e[48;5;196mhello world\e[m",
+        expected_truecolor: "\e[48;5;196mhello world\e[m",
+        expected_ansi256:   "\e[48;5;196mhello world\e[m",
+        expected_ansi:      "\e[101mhello world\e[m",
+        expected_ascii:     "\e[mhello world\e[m",
+      },
+      {
+        name:               "simple true color bg",
+        input:              "hello \e[38;2;255;133;55mworld\e[m",
+        expected_truecolor: "hello \e[38;2;255;133;55mworld\e[m",
+        expected_ansi256:   "hello \e[38;5;209mworld\e[m",
+        expected_ansi:      "hello \e[91mworld\e[m",
+        expected_ascii:     "hello \e[mworld\e[m",
+      },
+      {
+        name:               "itu true color bg",
+        input:              "hello \e[38:2::255:133:55mworld\e[m",
+        expected_truecolor: "hello \e[38:2::255:133:55mworld\e[m",
+        expected_ansi256:   "hello \e[38;5;209mworld\e[m",
+        expected_ansi:      "hello \e[91mworld\e[m",
+        expected_ascii:     "hello \e[mworld\e[m",
+      },
+      {
+        name:               "simple ansi 256 color bg",
+        input:              "hello \e[48:5:196mworld\e[m",
+        expected_truecolor: "hello \e[48:5:196mworld\e[m",
+        expected_ansi256:   "hello \e[48;5;196mworld\e[m",
+        expected_ansi:      "hello \e[101mworld\e[m",
+        expected_ascii:     "hello \e[mworld\e[m",
+      },
+      {
+        name:               "simple missing param",
+        input:              "\e[31mhello \e[;1mworld",
+        expected_truecolor: "\e[31mhello \e[;1mworld",
+        expected_ansi256:   "\e[31mhello \e[;1mworld",
+        expected_ansi:      "\e[31mhello \e[;1mworld",
+        expected_ascii:     "\e[mhello \e[;1mworld",
+      },
+      {
+        name:               "color with other attributes",
+        input:              "\e[1;38;5;204mhello \e[38;5;204mworld\e[m",
+        expected_truecolor: "\e[1;38;5;204mhello \e[38;5;204mworld\e[m",
+        expected_ansi256:   "\e[1;38;5;204mhello \e[38;5;204mworld\e[m",
+        expected_ansi:      "\e[1;91mhello \e[91mworld\e[m",
+        expected_ascii:     "\e[1mhello \e[mworld\e[m",
+      },
+    ]
+
+    writer_cases.each_with_index do |test_case, _|
+      writers.each do |profile, writer_fn|
+        it "#{test_case[:name]} (#{profile})" do
+          io = IO::Memory.new
+          writer = writer_fn.call(io)
+          writer.write_string(test_case[:input])
+
+          expected = case profile
+                     when Colorprofile::Profile::TrueColor
+                       test_case[:expected_truecolor]
+                     when Colorprofile::Profile::ANSI256
+                       test_case[:expected_ansi256]
+                     when Colorprofile::Profile::ANSI
+                       test_case[:expected_ansi]
+                     when Colorprofile::Profile::ASCII
+                       test_case[:expected_ascii]
+                     when Colorprofile::Profile::NoTTY
+                       Ansi.strip(test_case[:input])
+                     else
+                       ""
+                     end
+
+          io.to_s.should eq expected
+        end
+      end
+    end
   end
 end
