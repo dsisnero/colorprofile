@@ -285,7 +285,7 @@ module Colorprofile
   # NewWriter creates a new color profile writer that downgrades color sequences
   # based on the detected color profile.
   #
-  # If environ is nil, it will use ENV.to_a to get the environment variables.
+  # If environ is nil, it will use environment variables from ENV.
   #
   # It queries the given writer to determine if it supports ANSI escape codes.
   # If it does, along with the given environment variables, it will determine
@@ -293,7 +293,7 @@ module Colorprofile
   #
   # This respects the NO_COLOR, CLICOLOR, and CLICOLOR_FORCE environment variables.
   def self.new_writer(io : IO, environ : Array(String)? = nil) : Writer
-    env = environ || ENV.to_a
+    env = environ || ENV.map { |k, v| "#{k}=#{v}" }
     Writer.new(io, detect(io, env))
   end
 end
