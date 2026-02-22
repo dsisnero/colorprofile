@@ -1,4 +1,5 @@
-/docs/
+/docs/generated/
+/docs/build/
 /lib/
 /bin/
 /.shards/
