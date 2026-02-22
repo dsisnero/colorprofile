@@ -53,7 +53,7 @@ The Go colorprofile library provides terminal color profile detection and automa
 - [x] `isTTYForced(env environ) bool` - Checks TTY_FORCE env var
 - [x] `colorTerm(env environ) bool` - Checks COLORTERM env var for truecolor
 - [x] `envColorProfile(env environ) Profile` - Infers profile from environment
-- [x] `Terminfo(term string) Profile` - Returns profile based on terminfo database
+- [x] `Terminfo(term string) Profile` - Returns profile based on terminfo database [Blocking issue: #1](https://github.com/dsisnero/colorprofile/issues/1) | BD: colorprofile-d62
 - [x] `Tmux(env []string) Profile` - Returns profile based on tmux info output
 - [x] `tmux(env environ) Profile` - Internal tmux detection
 
@@ -63,6 +63,7 @@ The Go colorprofile library provides terminal color profile detection and automa
 
 **Port Status:** PARTIALLY COMPLETE
 **Crystal Location:** `src/colorprofile/env.cr`
+**Blocking Issue:** [#1](https://github.com/dsisnero/colorprofile/issues/1) | **BD Issue:** colorprofile-d62
 
 **Notes:**
 - Terminfo database lookup not fully implemented (depends on external library)
@@ -91,6 +92,7 @@ The Go colorprofile library provides terminal color profile detection and automa
 
 **Port Status:** NOT PORTED
 **Crystal Location:** `src/colorprofile/env.cr` (simplified version exists)
+**Blocking Issue:** [#2](https://github.com/dsisnero/colorprofile/issues/2) | **BD Issue:** colorprofile-adg
 
 **Notes:**
 - Requires Windows-specific APIs
@@ -159,6 +161,7 @@ The Go colorprofile library provides terminal color profile detection and automa
 
 **Port Status:** PARTIALLY COMPLETE
 **Crystal Location:** `spec/colorprofile_spec.cr`
+**Blocking Issue:** [#5](https://github.com/dsisnero/colorprofile/issues/5) | **BD Issue:** colorprofile-8m2
 
 **Notes:**
 - Basic enum tests ported
@@ -169,35 +172,36 @@ The Go colorprofile library provides terminal color profile detection and automa
 ### 2. `env_test.go`
 
 **Test Functions:**
-- [ ] `TestEnvColorProfile(t *testing.T)` - Tests environment-based detection
-  - [ ] "empty" - Empty environment
-  - [ ] "no tty" - TERM=dumb
-  - [ ] "dumb term, truecolor, not forced" - COLORTERM=truecolor
-  - [ ] "dumb term, truecolor, forced" - With CLICOLOR_FORCE
-  - [ ] "dumb term, CLICOLOR_FORCE=1"
-  - [ ] "dumb term, CLICOLOR=1"
-  - [ ] "xterm-256color"
-  - [ ] "xterm-256color, CLICOLOR=1"
-  - [ ] "xterm-256color, COLORTERM=yes"
-  - [ ] "xterm-256color, NO_COLOR=1"
-  - [ ] "xterm"
-  - [ ] "xterm, NO_COLOR=1"
-  - [ ] "xterm, CLICOLOR=1"
-  - [ ] "xterm, CLICOLOR_FORCE=1"
-  - [ ] "xterm-16color"
-  - [ ] "xterm-color"
-  - [ ] "xterm-256color, NO_COLOR=1, CLICOLOR_FORCE=1"
-  - [ ] "Windows Terminal" - WT_SESSION
-  - [ ] "Windows Terminal bash.exe"
-  - [ ] "screen default" - TERM=screen
-  - [ ] "screen colorterm" - screen with COLORTERM
-  - [ ] "tmux colorterm" - tmux with COLORTERM
-  - [ ] "tmux 256color" - tmux-256color
-  - [ ] "ignore COLORTERM when no TERM is defined"
-  - [ ] "direct color xterm terminal" - xterm-direct
+- [x] `TestEnvColorProfile(t *testing.T)` - Tests environment-based detection
+  - [x] "empty" - Empty environment
+  - [x] "no tty" - TERM=dumb
+  - [x] "dumb term, truecolor, not forced" - COLORTERM=truecolor
+  - [x] "dumb term, truecolor, forced" - With CLICOLOR_FORCE
+  - [x] "dumb term, CLICOLOR_FORCE=1"
+  - [x] "dumb term, CLICOLOR=1"
+  - [x] "xterm-256color"
+  - [x] "xterm-256color, CLICOLOR=1"
+  - [x] "xterm-256color, COLORTERM=yes"
+  - [x] "xterm-256color, NO_COLOR=1"
+  - [x] "xterm"
+  - [x] "xterm, NO_COLOR=1"
+  - [x] "xterm, CLICOLOR=1"
+  - [x] "xterm, CLICOLOR_FORCE=1"
+  - [x] "xterm-16color"
+  - [x] "xterm-color"
+  - [x] "xterm-256color, NO_COLOR=1, CLICOLOR_FORCE=1"
+  - [x] "Windows Terminal" - WT_SESSION
+  - [x] "Windows Terminal bash.exe"
+  - [x] "screen default" - TERM=screen
+  - [x] "screen colorterm" - screen with COLORTERM
+  - [x] "tmux colorterm" - tmux with COLORTERM
+  - [x] "tmux 256color" - tmux-256color
+  - [x] "ignore COLORTERM when no TERM is defined"
+  - [x] "direct color xterm terminal" - xterm-direct
 
-**Port Status:** NOT PORTED
-**Crystal Location:** Need to create comprehensive env tests
+**Port Status:** COMPLETE
+**Crystal Location:** `spec/colorprofile_spec.cr` (all 24 test cases ported and passing)
+**Blocking Issue:** [#3](https://github.com/dsisnero/colorprofile/issues/3) | **BD Issue:** colorprofile-vl8
 
 ---
 
@@ -225,6 +229,7 @@ The Go colorprofile library provides terminal color profile detection and automa
 
 **Port Status:** NOT PORTED
 **Crystal Location:** Need comprehensive writer tests
+**Blocking Issue:** [#4](https://github.com/dsisnero/colorprofile/issues/4) | **BD Issue:** colorprofile-13l
 
 ---
 
@@ -286,23 +291,23 @@ The Go colorprofile library provides terminal color profile detection and automa
 |----------|--------|-------|
 | Unix/Linux | COMPLETE | Full support |
 | macOS | COMPLETE | Full support |
-| Windows | PARTIAL | Simplified detection |
+| Windows | PARTIAL | Simplified detection ([#2](https://github.com/dsisnero/colorprofile/issues/2)) | BD: colorprofile-adg |
 
 ### Test Coverage
 
 | Test File | Status | Coverage |
 |-----------|--------|----------|
-| profile_test.go | PARTIAL | Basic tests only |
-| env_test.go | NOT STARTED | 24 test cases |
-| writer_test.go | NOT STARTED | 14 test cases + benchmarks |
+| profile_test.go | PARTIAL | Basic tests only ([#5](https://github.com/dsisnero/colorprofile/issues/5)) | BD: colorprofile-8m2 |
+| env_test.go | COMPLETE | 24 test cases ported and passing ([#3](https://github.com/dsisnero/colorprofile/issues/3)) | BD: colorprofile-vl8 (closed) |
+| writer_test.go | NOT STARTED | 14 test cases ([#4](https://github.com/dsisnero/colorprofile/issues/4)) + benchmarks ([#6](https://github.com/dsisnero/colorprofile/issues/6)) | BD: colorprofile-13l (tests), colorprofile-kjg (benchmarks) |
 
 ### Examples
 
 | Example | Status | Priority |
 |---------|--------|----------|
-| colors | NOT PORTED | Low |
-| profile | NOT PORTED | Low |
-| writer | NOT PORTED | Low |
+| colors | NOT PORTED | Low ([#7](https://github.com/dsisnero/colorprofile/issues/7)) | BD: colorprofile-dvm |
+| profile | NOT PORTED | Low ([#7](https://github.com/dsisnero/colorprofile/issues/7)) | BD: colorprofile-dvm |
+| writer | NOT PORTED | Low ([#7](https://github.com/dsisnero/colorprofile/issues/7)) | BD: colorprofile-dvm |
 
 ---
 
@@ -310,42 +315,42 @@ The Go colorprofile library provides terminal color profile detection and automa
 
 ### High Priority
 
-1. **Port all env_test.go test cases (24 tests)**
+1. **✅ Port all env_test.go test cases (24 tests)** ([#3](https://github.com/dsisnero/colorprofile/issues/3)) | BD: colorprofile-vl8 (closed)
    - Environment variable combinations
    - Platform-specific behaviors
    - Edge cases
 
-2. **Port all writer_test.go test cases (14+ tests)**
+2. **Port all writer_test.go test cases (14+ tests)** ([#4](https://github.com/dsisnero/colorprofile/issues/4)) | BD: colorprofile-13l
    - ANSI sequence handling
    - Color downsampling verification
    - Edge cases with missing params
    - ITU color format support
 
-3. **Complete Windows support**
+3. **Complete Windows support** ([#2](https://github.com/dsisnero/colorprofile/issues/2)) | BD: colorprofile-adg
    - Full windowsColorProfile implementation
    - Windows API integration
    - Windows-specific tests
 
 ### Medium Priority
 
-4. **Complete profile_test.go**
+4. **Complete profile_test.go** ([#5](https://github.com/dsisnero/colorprofile/issues/5)) | BD: colorprofile-8m2
    - Hex color conversion tests
    - Color caching verification
    - Edge cases with colorful library
 
-5. **Add benchmarks**
+5. **Add benchmarks** ([#6](https://github.com/dsisnero/colorprofile/issues/6)) | BD: colorprofile-kjg
    - Writer performance benchmarks
    - Color conversion benchmarks
    - Compare with Go implementation
 
 ### Low Priority
 
-6. **Port examples**
+6. **Port examples** ([#7](https://github.com/dsisnero/colorprofile/issues/7)) | BD: colorprofile-dvm
    - Colors palette display
    - Profile detection demo
    - Stdin/stdout pipe example
 
-7. **Terminfo database support**
+7. **Terminfo database support** ([#1](https://github.com/dsisnero/colorprofile/issues/1)) | BD: colorprofile-d62
    - Full terminfo integration
    - Tc/RGB capability detection
 

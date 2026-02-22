@@ -41,23 +41,158 @@ describe Colorprofile do
   end
 
   describe "environment detection" do
-    it "detects profile from environment" do
-      # Test with minimal environment
-      env = ["TERM=xterm-256color"]
-      profile = Colorprofile.env(env)
-      profile.should be >= Colorprofile::Profile::ANSI
-    end
+    # Test cases from vendor/env_test.go
+    cases = [
+      {
+        name:     "empty",
+        environ:  [] of String,
+        expected: {% if flag?(:windows) %}
+          # TODO: Implement proper Windows detection (issue #2)
+          Colorprofile::Profile::TrueColor
+        {% else %}
+          Colorprofile::Profile::NoTTY
+        {% end %},
+      },
+      {
+        name:     "no tty",
+        environ:  ["TERM=dumb"],
+        expected: Colorprofile::Profile::NoTTY,
+      },
+      {
+        name:     "dumb term, truecolor, not forced",
+        environ:  ["TERM=dumb", "COLORTERM=truecolor"],
+        expected: Colorprofile::Profile::NoTTY,
+      },
+      {
+        name:     "dumb term, truecolor, forced",
+        environ:  ["TERM=dumb", "COLORTERM=truecolor", "CLICOLOR_FORCE=1"],
+        expected: Colorprofile::Profile::TrueColor,
+      },
+      {
+        name:     "dumb term, CLICOLOR_FORCE=1",
+        environ:  ["TERM=dumb", "CLICOLOR_FORCE=1"],
+        expected: {% if flag?(:windows) %}
+          Colorprofile::Profile::TrueColor
+        {% else %}
+          Colorprofile::Profile::ANSI
+        {% end %},
+      },
+      {
+        name:     "dumb term, CLICOLOR=1",
+        environ:  ["TERM=dumb", "CLICOLOR=1"],
+        expected: Colorprofile::Profile::NoTTY,
+      },
+      {
+        name:     "xterm-256color",
+        environ:  ["TERM=xterm-256color"],
+        expected: Colorprofile::Profile::ANSI256,
+      },
+      {
+        name:     "xterm-256color, CLICOLOR=1",
+        environ:  ["TERM=xterm-256color", "CLICOLOR=1"],
+        expected: Colorprofile::Profile::ANSI256,
+      },
+      {
+        name:     "xterm-256color, COLORTERM=yes",
+        environ:  ["TERM=xterm-256color", "COLORTERM=yes"],
+        expected: Colorprofile::Profile::TrueColor,
+      },
+      {
+        name:     "xterm-256color, NO_COLOR=1",
+        environ:  ["TERM=xterm-256color", "NO_COLOR=1"],
+        expected: Colorprofile::Profile::ASCII,
+      },
+      {
+        name:     "xterm",
+        environ:  ["TERM=xterm"],
+        expected: Colorprofile::Profile::ANSI,
+      },
+      {
+        name:     "xterm, NO_COLOR=1",
+        environ:  ["TERM=xterm", "NO_COLOR=1"],
+        expected: Colorprofile::Profile::ASCII,
+      },
+      {
+        name:     "xterm, CLICOLOR=1",
+        environ:  ["TERM=xterm", "CLICOLOR=1"],
+        expected: Colorprofile::Profile::ANSI,
+      },
+      {
+        name:     "xterm, CLICOLOR_FORCE=1",
+        environ:  ["TERM=xterm", "CLICOLOR_FORCE=1"],
+        expected: Colorprofile::Profile::ANSI,
+      },
+      {
+        name:     "xterm-16color",
+        environ:  ["TERM=xterm-16color"],
+        expected: Colorprofile::Profile::ANSI,
+      },
+      {
+        name:     "xterm-color",
+        environ:  ["TERM=xterm-color"],
+        expected: Colorprofile::Profile::ANSI,
+      },
+      {
+        name:     "xterm-256color, NO_COLOR=1, CLICOLOR_FORCE=1",
+        environ:  ["TERM=xterm-256color", "NO_COLOR=1", "CLICOLOR_FORCE=1"],
+        expected: Colorprofile::Profile::ASCII,
+      },
+      {
+        name:     "Windows Terminal",
+        environ:  ["WT_SESSION=1"],
+        expected: {% if flag?(:windows) %}
+          Colorprofile::Profile::TrueColor
+        {% else %}
+          Colorprofile::Profile::NoTTY
+        {% end %},
+      },
+      {
+        name:     "Windows Terminal bash.exe",
+        environ:  ["TERM=xterm-256color", "WT_SESSION=1"],
+        expected: Colorprofile::Profile::TrueColor,
+      },
+      {
+        name:     "screen default",
+        environ:  ["TERM=screen"],
+        expected: Colorprofile::Profile::ANSI256,
+      },
+      {
+        name:     "screen colorterm",
+        environ:  ["TERM=screen", "COLORTERM=truecolor"],
+        expected: Colorprofile::Profile::ANSI256,
+      },
+      {
+        name:     "tmux colorterm",
+        environ:  ["TERM=tmux", "COLORTERM=truecolor"],
+        expected: Colorprofile::Profile::ANSI256,
+      },
+      {
+        name:     "tmux 256color",
+        environ:  ["TERM=tmux-256color"],
+        expected: Colorprofile::Profile::ANSI256,
+      },
+      {
+        name:     "ignore COLORTERM when no TERM is defined",
+        environ:  ["COLORTERM=truecolor"],
+        expected: {% if flag?(:windows) %}
+          # TODO: Implement proper Windows detection (issue #2)
+          Colorprofile::Profile::TrueColor
+        {% else %}
+          Colorprofile::Profile::NoTTY
+        {% end %},
+      },
+      {
+        name:     "direct color xterm terminal",
+        environ:  ["TERM=xterm-direct"],
+        expected: Colorprofile::Profile::TrueColor,
+      },
+    ]
 
-    it "respects NO_COLOR" do
-      env = ["TERM=xterm-256color", "NO_COLOR=1"]
-      profile = Colorprofile.env(env)
-      profile.should eq Colorprofile::Profile::ASCII
-    end
-
-    it "respects CLICOLOR_FORCE" do
-      env = ["CLICOLOR_FORCE=1"]
-      profile = Colorprofile.env(env)
-      profile.should be >= Colorprofile::Profile::ANSI
+    cases.each do |test_case|
+      it test_case[:name] do
+        profile = Colorprofile.env(test_case[:environ])
+        profile.should eq test_case[:expected]
+      end
     end
   end
 
