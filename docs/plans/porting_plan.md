@@ -1,16 +1,20 @@
 # Colorprofile Porting Plan
 
-This document tracks the complete port of `github.com/charmbracelet/colorprofile` from Go to Crystal.
+This document tracks the complete port of
+`github.com/charmbracelet/colorprofile` from Go to Crystal.
 
 ## Overview
 
-The Go colorprofile library provides terminal color profile detection and automatic color downsampling. This port uses the `dsisnero/ansi` Crystal library for ANSI handling.
+The Go colorprofile library provides terminal color profile detection and
+automatic color downsampling. This port uses the `dsisnero/ansi` Crystal library
+for ANSI handling.
 
 ## Source Files Analysis
 
 ### 1. `profile.go`
 
 **Constants:**
+
 - [x] `Unknown Profile = iota` - Profile enum variant
 - [x] `NoTTY` - Profile enum variant
 - [x] `ASCII` - Profile enum variant
@@ -20,15 +24,19 @@ The Go colorprofile library provides terminal color profile detection and automa
 - [x] `Ascii = ASCII` - Backwards compatibility alias
 
 **Global Variables:**
+
 - [x] `cache` - Color conversion cache (map[Profile]map[color.Color]color.Color)
 - [x] `mu` - RWMutex for cache synchronization
 
 **Types:**
+
 - [x] `Profile` - byte enum for color profiles
 
 **Methods:**
+
 - [x] `(p Profile) String() string` - Returns string representation
-- [x] `(p Profile) Convert(c color.Color) color.Color` - Converts color to profile's supported colors
+- [x] `(p Profile) Convert(c color.Color) color.Color` - Converts color to
+      profile's supported colors
 
 **Port Status:** COMPLETE
 **Crystal Location:** `src/colorprofile/profile.cr`
@@ -38,27 +46,35 @@ The Go colorprofile library provides terminal color profile detection and automa
 ### 2. `env.go`
 
 **Constants:**
+
 - [x] `dumbTerm = "dumb"` - Constant for dumb terminal check
 
 **Types:**
+
 - [x] `environ` - map[string]string alias for environment variables
 
 **Functions:**
-- [x] `Detect(output io.Writer, env []string) Profile` - Detects profile from output and env
+
+- [x] `Detect(output io.Writer, env []string) Profile` - Detects profile from
+      output and env
 - [x] `Env(env []string) Profile` - Returns profile from environment only
-- [x] `colorProfile(isatty bool, env environ) Profile` - Internal profile detection logic
+- [x] `colorProfile(isatty bool, env environ) Profile` - Internal profile
+      detection logic
 - [x] `envNoColor(env environ) bool` - Checks NO_COLOR env var
 - [x] `cliColor(env environ) bool` - Checks CLICOLOR env var
 - [x] `cliColorForced(env environ) bool` - Checks CLICOLOR_FORCE env var
 - [x] `isTTYForced(env environ) bool` - Checks TTY_FORCE env var
 - [x] `colorTerm(env environ) bool` - Checks COLORTERM env var for truecolor
 - [x] `envColorProfile(env environ) Profile` - Infers profile from environment
-- [x] `Terminfo(term string) Profile` - Returns profile based on terminfo database
+- [x] `Terminfo(term string) Profile` - Returns profile based on terminfo
+      database
 - [x] `Tmux(env []string) Profile` - Returns profile based on tmux info output
 - [x] `tmux(env environ) Profile` - Internal tmux detection
 
 **Type Methods:**
-- [x] `(e environ) lookup(key string) (string, bool)` - Lookup env var with existence check
+
+- [x] `(e environ) lookup(key string) (string, bool)` - Lookup env var with
+      existence check
 - [x] `(e environ) get(key string) string` - Get env var (empty if not exists)
 
 **Port Status:** COMPLETE
@@ -66,7 +82,9 @@ The Go colorprofile library provides terminal color profile detection and automa
 **Blocking Issue:** None
 
 **Notes:**
-- Terminfo database lookup implemented using infocmp command (checks for Tc and RGB capabilities)
+
+- Terminfo database lookup implemented using infocmp command (checks for Tc and
+  RGB capabilities)
 - Tmux detection uses command execution
 
 ---
@@ -74,17 +92,21 @@ The Go colorprofile library provides terminal color profile detection and automa
 ### 3. `env_other.go`
 
 **Functions:**
-- [x] `windowsColorProfile(env map[string]string) (Profile, bool)` - Platform stub for non-Windows
 
-**Port Status:** COMPLETE
-**Crystal Location:** `src/colorprofile/env.cr` (using Crystal compile-time flags)
+- [x] `windowsColorProfile(env map[string]string) (Profile, bool)` - Platform
+      stub for non-Windows
+
+**Port Status:** COMPLETE **Crystal Location:** `src/colorprofile/env.cr` (using
+Crystal compile-time flags)
 
 ---
 
 ### 4. `env_windows.go`
 
 **Functions:**
-- [ ] `windowsColorProfile(env map[string]string) (Profile, bool)` - Windows-specific detection
+
+- [ ] `windowsColorProfile(env map[string]string) (Profile, bool)` -
+      Windows-specific detection
   - [ ] ConEmuANSI check
   - [ ] Windows version detection via RtlGetNtVersionNumbers
   - [ ] ANSICON version checking
@@ -95,6 +117,7 @@ The Go colorprofile library provides terminal color profile detection and automa
 **Blocking Issue:** [#2](https://github.com/dsisnero/colorprofile/issues/2) | **BD Issue:** colorprofile-adg
 
 **Notes:**
+
 - Requires Windows-specific APIs
 - Currently has simplified implementation that assumes TrueColor
 
@@ -103,21 +126,29 @@ The Go colorprofile library provides terminal color profile detection and automa
 ### 5. `writer.go`
 
 **Functions:**
-- [x] `NewWriter(w io.Writer, environ []string) *Writer` - Creates new Writer with detected profile
-- [x] `handleSgr(w *Writer, p *ansi.Parser, buf *bytes.Buffer)` - Handles SGR sequences
+
+- [x] `NewWriter(w io.Writer, environ []string) *Writer` - Creates new Writer
+      with detected profile
+- [x] `handleSgr(w *Writer, p *ansi.Parser, buf *bytes.Buffer)` - Handles SGR
+      sequences
 
 **Types:**
+
 - [x] `Writer` - struct with Forward (io.Writer) and Profile fields
 
 **Methods:**
-- [x] `(w *Writer) Write(p []byte) (int, error)` - Writes bytes with color downsampling
-- [x] `(w *Writer) downsample(p []byte) (int, error)` - Performs actual downsampling
+
+- [x] `(w *Writer) Write(p []byte) (int, error)` - Writes bytes with color
+      downsampling
+- [x] `(w *Writer) downsample(p []byte) (int, error)` - Performs actual
+      downsampling
 - [x] `(w *Writer) WriteString(s string) (n int, err error)` - Writes string
 
 **Port Status:** COMPLETE
 **Crystal Location:** `src/colorprofile/writer.cr`
 
 **Notes:**
+
 - All SGR handling implemented (foreground, background, underline colors)
 - Supports 3/4-bit, 8-bit, and 24-bit colors
 - Handles bright colors (90-97, 100-107)
@@ -136,6 +167,7 @@ The Go colorprofile library provides terminal color profile detection and automa
 ### 1. `profile_test.go`
 
 **Test Functions:**
+
 - [x] `TestHexTo256(t *testing.T)` - Tests color conversion to 256 colors
   - [x] "white" - White color conversion
   - [x] "offwhite" - Off-white color conversion
@@ -164,6 +196,7 @@ The Go colorprofile library provides terminal color profile detection and automa
 **Blocking Issue:** [#5](https://github.com/dsisnero/colorprofile/issues/5) | **BD Issue:** colorprofile-8m2
 
 **Notes:**
+
 - Basic enum tests ported
 - Full color conversion tests with colorful library needed
 
@@ -172,6 +205,7 @@ The Go colorprofile library provides terminal color profile detection and automa
 ### 2. `env_test.go`
 
 **Test Functions:**
+
 - [x] `TestEnvColorProfile(t *testing.T)` - Tests environment-based detection
   - [x] "empty" - Empty environment
   - [x] "no tty" - TERM=dumb
@@ -199,8 +233,8 @@ The Go colorprofile library provides terminal color profile detection and automa
   - [x] "ignore COLORTERM when no TERM is defined"
   - [x] "direct color xterm terminal" - xterm-direct
 
-**Port Status:** COMPLETE
-**Crystal Location:** `spec/colorprofile_spec.cr` (all 24 test cases ported and passing)
+**Port Status:** COMPLETE **Crystal Location:** `spec/colorprofile_spec.cr` (all
+24 test cases ported and passing)
 **Blocking Issue:** [#3](https://github.com/dsisnero/colorprofile/issues/3) | **BD Issue:** colorprofile-vl8
 
 ---
@@ -208,6 +242,7 @@ The Go colorprofile library provides terminal color profile detection and automa
 ### 3. `writer_test.go`
 
 **Test Functions:**
+
 - [ ] `TestWriter(t *testing.T)` - Tests Writer functionality
   - [ ] "empty"
   - [ ] "no styles"
@@ -238,6 +273,7 @@ The Go colorprofile library provides terminal color profile detection and automa
 ### 1. `examples/colors/main.go`
 
 **Functions:**
+
 - [ ] `printBlock(c ansi.Color, fg ansi.Color)` - Prints colored blocks
 - [ ] `main()` - Displays color palette
 
@@ -249,6 +285,7 @@ The Go colorprofile library provides terminal color profile detection and automa
 ### 2. `examples/profile/main.go`
 
 **Functions:**
+
 - [ ] `colorToHex(c color.Color) string` - Converts color to hex string
 - [ ] `main()` - Demonstrates profile detection and conversion
 
@@ -260,6 +297,7 @@ The Go colorprofile library provides terminal color profile detection and automa
 ### 3. `examples/writer/writer.go`
 
 **Functions:**
+
 - [ ] `main()` - Stdin to stdout color degradation pipe
 
 **Port Status:** NOT PORTED
@@ -291,23 +329,23 @@ The Go colorprofile library provides terminal color profile detection and automa
 |----------|--------|-------|
 | Unix/Linux | COMPLETE | Full support |
 | macOS | COMPLETE | Full support |
-| Windows | PARTIAL | Simplified detection ([#2](https://github.com/dsisnero/colorprofile/issues/2)) | BD: colorprofile-adg |
+| Windows | PARTIAL | Simplified detection ([#2](https://github.com/dsisnero/colorprofile/issues/2)) |
 
 ### Test Coverage
 
 | Test File | Status | Coverage |
 |-----------|--------|----------|
-| profile_test.go | PARTIAL | Basic tests only ([#5](https://github.com/dsisnero/colorprofile/issues/5)) | BD: colorprofile-8m2 |
-| env_test.go | COMPLETE | 24 test cases ported and passing ([#3](https://github.com/dsisnero/colorprofile/issues/3)) | BD: colorprofile-vl8 (closed) |
-| writer_test.go | NOT STARTED | 14 test cases ([#4](https://github.com/dsisnero/colorprofile/issues/4)) + benchmarks ([#6](https://github.com/dsisnero/colorprofile/issues/6)) | BD: colorprofile-13l (tests), colorprofile-kjg (benchmarks) |
+| profile_test.go | PARTIAL | Basic tests only ([#5](https://github.com/dsisnero/colorprofile/issues/5)) |
+| env_test.go | COMPLETE | 24 test cases ported and passing ([#3](https://github.com/dsisnero/colorprofile/issues/3)) |
+| writer_test.go | NOT STARTED | 14 test cases ([#4](https://github.com/dsisnero/colorprofile/issues/4)) + benchmarks ([#6](https://github.com/dsisnero/colorprofile/issues/6)) |
 
 ### Examples
 
 | Example | Status | Priority |
 |---------|--------|----------|
-| colors | NOT PORTED | Low ([#7](https://github.com/dsisnero/colorprofile/issues/7)) | BD: colorprofile-dvm |
-| profile | NOT PORTED | Low ([#7](https://github.com/dsisnero/colorprofile/issues/7)) | BD: colorprofile-dvm |
-| writer | NOT PORTED | Low ([#7](https://github.com/dsisnero/colorprofile/issues/7)) | BD: colorprofile-dvm |
+| colors | NOT PORTED | Low ([#7](https://github.com/dsisnero/colorprofile/issues/7)) |
+| profile | NOT PORTED | Low ([#7](https://github.com/dsisnero/colorprofile/issues/7)) |
+| writer | NOT PORTED | Low ([#7](https://github.com/dsisnero/colorprofile/issues/7)) |
 
 ---
 
@@ -315,42 +353,54 @@ The Go colorprofile library provides terminal color profile detection and automa
 
 ### High Priority
 
-1. **✅ Port all env_test.go test cases (24 tests)** ([#3](https://github.com/dsisnero/colorprofile/issues/3)) | BD: colorprofile-vl8 (closed)
+1. **✅ Port all env_test.go test cases (24 tests)**
+   ([#3](https://github.com/dsisnero/colorprofile/issues/3)) | BD:
+   colorprofile-vl8 (closed)
    - Environment variable combinations
    - Platform-specific behaviors
    - Edge cases
 
-2. **Port all writer_test.go test cases (14+ tests)** ([#4](https://github.com/dsisnero/colorprofile/issues/4)) | BD: colorprofile-13l
+2. **Port all writer_test.go test cases (14+ tests)**
+   ([#4](https://github.com/dsisnero/colorprofile/issues/4)) | BD:
+   colorprofile-13l
    - ANSI sequence handling
    - Color downsampling verification
    - Edge cases with missing params
    - ITU color format support
 
-3. **Complete Windows support** ([#2](https://github.com/dsisnero/colorprofile/issues/2)) | BD: colorprofile-adg
+3. **Complete Windows support**
+   ([#2](https://github.com/dsisnero/colorprofile/issues/2)) | BD:
+   colorprofile-adg
    - Full windowsColorProfile implementation
    - Windows API integration
    - Windows-specific tests
 
 ### Medium Priority
 
-4. **Complete profile_test.go** ([#5](https://github.com/dsisnero/colorprofile/issues/5)) | BD: colorprofile-8m2
+4. **Complete profile_test.go**
+   ([#5](https://github.com/dsisnero/colorprofile/issues/5)) | BD:
+   colorprofile-8m2
    - Hex color conversion tests
    - Color caching verification
    - Edge cases with colorful library
 
-5. **Add benchmarks** ([#6](https://github.com/dsisnero/colorprofile/issues/6)) | BD: colorprofile-kjg
+5. **Add benchmarks** ([#6](https://github.com/dsisnero/colorprofile/issues/6))
+   | BD: colorprofile-kjg
    - Writer performance benchmarks
    - Color conversion benchmarks
    - Compare with Go implementation
 
 ### Low Priority
 
-6. **Port examples** ([#7](https://github.com/dsisnero/colorprofile/issues/7)) | BD: colorprofile-dvm
+6. **Port examples** ([#7](https://github.com/dsisnero/colorprofile/issues/7)) |
+   BD: colorprofile-dvm
    - Colors palette display
    - Profile detection demo
    - Stdin/stdout pipe example
 
-7. **Terminfo database support** ([#1](https://github.com/dsisnero/colorprofile/issues/1)) | BD: colorprofile-d62
+7. **Terminfo database support**
+   ([#1](https://github.com/dsisnero/colorprofile/issues/1)) | BD:
+   colorprofile-d62
    - Full terminfo integration
    - Tc/RGB capability detection
 
@@ -380,15 +430,21 @@ The Go colorprofile library provides terminal color profile detection and automa
 
 ## Notes
 
-1. **Caching Strategy**: The Go implementation uses a two-level cache (Profile -> Color -> Color). The Crystal port maintains this structure using a Hash with tuple keys.
+1. **Caching Strategy**: The Go implementation uses a two-level cache (Profile
+   -> Color -> Color). The Crystal port maintains this structure using a Hash
+   with tuple keys.
 
-2. **Platform Differences**: Crystal uses compile-time flags (`flag?(:windows)`) instead of Go's build tags.
+2. **Platform Differences**: Crystal uses compile-time flags (`flag?(:windows)`)
+   instead of Go's build tags.
 
-3. **Error Handling**: Go uses multiple return values (value, error). Crystal uses exceptions or nilable returns.
+3. **Error Handling**: Go uses multiple return values (value, error). Crystal
+   uses exceptions or nilable returns.
 
-4. **Type System**: Crystal's type system is more expressive with union types, which simplifies some color type handling.
+4. **Type System**: Crystal's type system is more expressive with union types,
+   which simplifies some color type handling.
 
-5. **String vs Bytes**: Go uses `[]byte` for raw data. Crystal uses `Bytes` (alias for `Slice(UInt8)`) or `String` depending on context.
+5. **String vs Bytes**: Go uses `[]byte` for raw data. Crystal uses `Bytes`
+   (alias for `Slice(UInt8)`) or `String` depending on context.
 
 ---
 
