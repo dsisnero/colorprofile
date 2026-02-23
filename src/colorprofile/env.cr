@@ -1,5 +1,6 @@
 require "./profile"
 require "ansi"
+require "terminfo"
 
 module Colorprofile
   DUMB_TERM = "dumb"
@@ -208,36 +209,17 @@ module Colorprofile
       return Profile::NoTTY
     end
 
-    # Try to query terminfo database using infocmp command
-    # Check for Tc or RGB extended boolean capabilities which indicate TrueColor support
-    if has_terminfo_capability?(term, "Tc") || has_terminfo_capability?(term, "RGB")
-      return Profile::TrueColor
+    begin
+      ti = Terminfo::Data.new(term: term)
+      # Check extended boolean capabilities
+      if ti.extended_booleans["Tc"]? || ti.extended_booleans["RGB"]?
+        return Profile::TrueColor
+      end
+    rescue
+      # terminfo load failed
     end
 
     Profile::ANSI
-  end
-
-  private def self.has_terminfo_capability?(term : String, cap : String) : Bool
-    # Use infocmp -L to list capabilities in long format
-    # Check if the capability appears as a boolean capability (standalone word)
-    output = execute_infocmp(term)
-    return false if output.empty?
-
-    # Parse output: capabilities are listed comma-separated, may be split across lines
-    # Look for the capability as a standalone word (preceded by space or start of line,
-    # followed by comma or end of line)
-    pattern = /(^|\s)#{Regex.escape(cap)}(,|$)/
-    output.each_line.any? { |line| line =~ pattern }
-  end
-
-  private def self.execute_infocmp(term : String) : String
-    process = Process.new("infocmp", ["-L", term], output: Process::Redirect::Pipe, error: Process::Redirect::Pipe)
-    output = process.output.gets_to_end
-    _error = process.error.gets_to_end
-    status = process.wait
-    status.success? ? output : ""
-  rescue
-    "" # infocmp not available or other error
   end
 
   # Tmux returns the color profile based on `tmux info` output. Tmux supports
@@ -304,6 +286,9 @@ module Colorprofile
               return Profile::ANSI
             end
             return Profile::ANSI256
+          else
+            # ANSICON_VER missing or empty
+            return Profile::ANSI
           end
         end
         return Profile::NoTTY

@@ -283,13 +283,14 @@ describe Colorprofile do
       writer.profile.should eq Colorprofile::Profile::NoTTY
     end
 
-    it "uses Process.env when environ is nil" do
+    it "nil environ results in empty environment" do
       io = IO::Memory.new
-      # Save and modify ENV to ensure predictable result
+      # Save and modify ENV to ensure test doesn't rely on ENV
       original_term = ENV["TERM"]?
       ENV["TERM"] = "dumb"
       begin
         writer = Colorprofile.new_writer(io, nil)
+        # With empty environment, TERM is nil, profile should be NoTTY
         writer.profile.should eq Colorprofile::Profile::NoTTY
       ensure
         if original_term

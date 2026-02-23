@@ -329,7 +329,7 @@ module Colorprofile
   #
   # This respects the NO_COLOR, CLICOLOR, and CLICOLOR_FORCE environment variables.
   def self.new_writer(io : IO, environ : Array(String)? = nil) : Writer
-    env = environ || ENV.map { |k, v| "#{k}=#{v}" }
+    env = environ || [] of String
     Writer.new(io, detect(io, env))
   end
 end
