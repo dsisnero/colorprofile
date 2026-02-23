@@ -1,15 +1,12 @@
-.PHONY: install update format lint test clean
+.PHONY: install update format lint test markdown markdown-check clean
 
 install:
-	shards install
+	BEADS_DIR=$$(pwd)/.beads shards install
 
 update:
-	shards update
+	BEADS_DIR=$$(pwd)/.beads shards update
 
 format:
-	crystal tool format
-
-format-check:
 	crystal tool format --check
 
 lint:
@@ -19,5 +16,11 @@ lint:
 test:
 	crystal spec
 
+markdown:
+	rumdl fmt .
+
+markdown-check:
+	rumdl check . --check
+
 clean:
-	rm -rf ./temp/*
+	rm -rf temp/*
