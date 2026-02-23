@@ -22,7 +22,7 @@ describe Colorprofile do
     end
 
     it "provides ascii alias" do
-      Colorprofile::Profile.ascii.should eq Colorprofile::Profile::ASCII
+      Colorprofile::Ascii.should eq Colorprofile::Profile::ASCII
     end
   end
 

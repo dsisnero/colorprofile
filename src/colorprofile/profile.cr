@@ -16,11 +16,6 @@ module Colorprofile
     # TrueColor is a profile with 16 million colors (24-bit).
     TrueColor
 
-    # Ascii is an alias for the ASCII profile for backwards compatibility.
-    def self.ascii
-      ASCII
-    end
-
     # String returns the string representation of a Profile.
     def to_s : String
       case self
@@ -49,16 +44,21 @@ module Colorprofile
         return c
       end
 
-      # Do we have a cached color for this profile and color?
-      cache_key = {self, c}
-      if cached = @@cache[cache_key]?
-        return cached
-      end
+      CACHE_LOCK.synchronize do
+        if profile_cache = CACHE[self]?
+          if cached = profile_cache[c]?
+            return cached
+          end
+        end
 
-      # If we don't have a cached color, we need to convert it and cache it.
-      converted = convert_color(c)
-      @@cache[cache_key] = converted if converted
-      converted
+        converted = convert_color(c)
+
+        if profile_cache = CACHE[self]?
+          profile_cache[c] = converted unless profile_cache.has_key?(c)
+        end
+
+        converted
+      end
     end
 
     private def convert_color(c : Ansi::PaletteColor) : Ansi::PaletteColor
@@ -82,21 +82,20 @@ module Colorprofile
         end
       end
     end
-
-    @@cache = Hash(Tuple(Profile, Ansi::PaletteColor), Ansi::PaletteColor).new
-    @@mutex = Mutex.new
-
-    # Cache for color conversions
-    def self.cache(profile : Profile, color : Ansi::PaletteColor) : Ansi::PaletteColor?
-      @@mutex.synchronize do
-        @@cache[{profile, color}]?
-      end
-    end
-
-    def self.set_cache(profile : Profile, original : Ansi::PaletteColor, converted : Ansi::PaletteColor)
-      @@mutex.synchronize do
-        @@cache[{profile, original}] = converted
-      end
-    end
   end
+
+  # Ascii is an alias for the ASCII profile for backwards compatibility.
+  Ascii = Profile::ASCII
+
+  # Cache for color conversions, matches Go structure: map[Profile]map[color.Color]color.Color
+  # Initialized only for ANSI256 and ANSI profiles (TrueColor doesn't cache, ASCII/NoTTY don't convert)
+  private CACHE = begin
+    hash = Hash(Profile, Hash(Ansi::PaletteColor, Ansi::PaletteColor)).new
+    hash[Profile::ANSI256] = Hash(Ansi::PaletteColor, Ansi::PaletteColor).new
+    hash[Profile::ANSI] = Hash(Ansi::PaletteColor, Ansi::PaletteColor).new
+    hash
+  end
+
+  # Mutex for cache access (simpler than Go's sync.RWMutex but functionally correct)
+  private CACHE_LOCK = Mutex.new
 end
