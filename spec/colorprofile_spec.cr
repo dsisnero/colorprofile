@@ -1,5 +1,6 @@
 require "./spec_helper"
 require "ansi"
+require "colorful"
 
 describe Colorprofile do
   describe "Profile" do
@@ -37,6 +38,77 @@ describe Colorprofile do
       color = Ansi::Color.new(100_u8, 150_u8, 200_u8)
       result = Colorprofile::Profile::TrueColor.convert(color)
       result.should eq color
+    end
+
+    describe "hex to 256 conversion" do
+      cases = [
+        {
+          name:            "white",
+          input:           Colorful::Color.new(r: 1.0, g: 1.0, b: 1.0),
+          expected_hex:    "#ffffff",
+          expected_output: Ansi::IndexedColor.new(231_u8),
+        },
+        {
+          name:            "offwhite",
+          input:           Colorful::Color.new(r: 0.9333, g: 0.9333, b: 0.933),
+          expected_hex:    "#eeeeee",
+          expected_output: Ansi::IndexedColor.new(255_u8),
+        },
+        {
+          name:            "slightly brighter than offwhite",
+          input:           Colorful::Color.new(r: 0.95, g: 0.95, b: 0.95),
+          expected_hex:    "#f2f2f2",
+          expected_output: Ansi::IndexedColor.new(255_u8),
+        },
+        {
+          name:            "red",
+          input:           Colorful::Color.new(r: 1.0, g: 0.0, b: 0.0),
+          expected_hex:    "#ff0000",
+          expected_output: Ansi::IndexedColor.new(196_u8),
+        },
+        {
+          name:            "silver foil",
+          input:           Colorful::Color.new(r: 0.6863, g: 0.6863, b: 0.6863),
+          expected_hex:    "#afafaf",
+          expected_output: Ansi::IndexedColor.new(145_u8),
+        },
+        {
+          name:            "silver chalice",
+          input:           Colorful::Color.new(r: 0.698, g: 0.698, b: 0.698),
+          expected_hex:    "#b2b2b2",
+          expected_output: Ansi::IndexedColor.new(249_u8),
+        },
+        {
+          name:            "slightly closer to silver foil",
+          input:           Colorful::Color.new(r: 0.692, g: 0.692, b: 0.692),
+          expected_hex:    "#b0b0b0",
+          expected_output: Ansi::IndexedColor.new(145_u8),
+        },
+        {
+          name:            "slightly closer to silver chalice",
+          input:           Colorful::Color.new(r: 0.694, g: 0.694, b: 0.694),
+          expected_hex:    "#b1b1b1",
+          expected_output: Ansi::IndexedColor.new(249_u8),
+        },
+        {
+          name:            "gray",
+          input:           Colorful::Color.new(r: 0.5, g: 0.5, b: 0.5),
+          expected_hex:    "#808080",
+          expected_output: Ansi::IndexedColor.new(244_u8),
+        },
+      ]
+
+      cases.each do |test_case|
+        it test_case[:name] do
+          # Check hex conversion
+          test_case[:input].hex.should eq test_case[:expected_hex]
+
+          # Convert color using ANSI256 profile
+          col = Colorprofile::Profile::ANSI256.convert(test_case[:input])
+          col.should be_a(Ansi::IndexedColor)
+          col.as(Ansi::IndexedColor).should eq test_case[:expected_output]
+        end
+      end
     end
   end
 
@@ -203,6 +275,31 @@ describe Colorprofile do
       writer.profile.should eq Colorprofile::Profile::ANSI
     end
 
+    it "does not panic with environ parameter" do
+      io = IO::Memory.new
+      # Should not raise
+      writer = Colorprofile.new_writer(io, ["TERM=dumb"])
+      # Profile should be detected as NoTTY because TERM=dumb
+      writer.profile.should eq Colorprofile::Profile::NoTTY
+    end
+
+    it "uses Process.env when environ is nil" do
+      io = IO::Memory.new
+      # Save and modify ENV to ensure predictable result
+      original_term = ENV["TERM"]?
+      ENV["TERM"] = "dumb"
+      begin
+        writer = Colorprofile.new_writer(io, nil)
+        writer.profile.should eq Colorprofile::Profile::NoTTY
+      ensure
+        if original_term
+          ENV["TERM"] = original_term
+        else
+          ENV.delete("TERM")
+        end
+      end
+    end
+
     it "writes text for TrueColor profile" do
       io = IO::Memory.new
       writer = Colorprofile::Writer.new(io, Colorprofile::Profile::TrueColor)
@@ -357,6 +454,64 @@ describe Colorprofile do
                      end
 
           io.to_s.should eq expected
+        end
+      end
+    end
+  end
+
+  describe "caching" do
+    cases = [
+      {
+        name:     "red",
+        input:    Colorful::Color.new(r: 1.0, g: 0.0, b: 0.0),
+        profile:  Colorprofile::Profile::ANSI256,
+        expected: Ansi::IndexedColor.new(196_u8),
+      },
+      {
+        name:     "grey",
+        input:    Colorful::Color.new(r: 0.5, g: 0.5, b: 0.5),
+        profile:  Colorprofile::Profile::ANSI256,
+        expected: Ansi::IndexedColor.new(244_u8),
+      },
+      {
+        name:     "white",
+        input:    Colorful::Color.new(r: 1.0, g: 1.0, b: 1.0),
+        profile:  Colorprofile::Profile::ANSI,
+        expected: Ansi::BasicColor::BrightWhite,
+      },
+      {
+        name:     "light burgundy",
+        input:    Colorful::Color.hex("#7b2c2c"),
+        profile:  Colorprofile::Profile::ANSI256,
+        expected: Ansi::IndexedColor.new(88_u8),
+      },
+      {
+        name:     "truecolor",
+        input:    Colorful::Color.hex("#8ab7ed"),
+        profile:  Colorprofile::Profile::TrueColor,
+        expected: Colorful::Color.hex("#8ab7ed"),
+      },
+      {
+        name:     "offwhite",
+        input:    Colorful::Color.hex("#eeeeee"),
+        profile:  Colorprofile::Profile::ANSI256,
+        expected: Ansi::IndexedColor.new(255_u8),
+      },
+    ]
+
+    cases.each do |test_case|
+      it test_case[:name] do
+        col = test_case[:profile].convert(test_case[:input])
+        col.should eq test_case[:expected]
+
+        if test_case[:profile] == Colorprofile::Profile::TrueColor
+          # TrueColor is a passthrough, so we don't cache it.
+          # Just verify it returns the same color object
+          col.should eq test_case[:input]
+        else
+          # Check that repeated conversion returns the same result (cached)
+          col2 = test_case[:profile].convert(test_case[:input])
+          col2.should eq col
         end
       end
     end
