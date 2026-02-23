@@ -334,7 +334,7 @@ describe Colorprofile do
       },
     ]
 
-    writer_cases.each_with_index do |test_case, _|
+    writer_cases.each do |test_case|
       writers.each do |profile, writer_fn|
         it "#{test_case[:name]} (#{profile})" do
           io = IO::Memory.new

@@ -63,6 +63,7 @@ module Colorprofile
     color_profile(true, new_environ(env))
   end
 
+  # ameba:disable Metrics/CyclomaticComplexity
   private def self.color_profile(isatty : Bool, environ : Environ) : Profile
     term = environ["TERM"]?
     is_dumb = term.nil? || term == DUMB_TERM
@@ -277,16 +278,58 @@ module Colorprofile
   end
 
   {% if flag?(:windows) %}
+    @[Link("ntdll")]
+    lib Ntdll
+      fun RtlGetNtVersionNumbers(major : UInt32*, minor : UInt32*, build : UInt32*) : Void
+    end
+
     # Windows-specific color profile detection
     private def self.windows_color_profile(environ : Environ) : Profile?
       if environ["ConEmuANSI"]? == "ON"
         return Profile::TrueColor
       end
 
-      # This is a simplified version - full Windows detection would require
-      # calling Windows APIs to get the OS version
-      # For now, assume modern Windows supports TrueColor
+      version = windows_version
+      return nil unless version
+      major, minor, build = version
+
+      if build < 10586 || major < 10
+        # No ANSI support before WindowsNT 10 build 10586
+        if !environ["ANSICON"]?.nil? && !environ["ANSICON"]?.empty?
+          ansicon_ver = environ["ANSICON_VER"]?
+          if ansicon_ver && !ansicon_ver.empty?
+            cv = ansicon_ver.to_i? || 0
+            if cv < 181
+              # No 8 bit color support before ANSICON 1.81
+              return Profile::ANSI
+            end
+            return Profile::ANSI256
+          end
+        end
+        return Profile::NoTTY
+      end
+
+      if build < 14931
+        # No true color support before build 14931
+        return Profile::ANSI256
+      end
+
       Profile::TrueColor
+    end
+
+    # Get Windows version numbers (major, minor, build)
+    # Returns nil if version detection fails
+    private def self.windows_version : {Int32, Int32, Int32}?
+      major = 0_u32
+      minor = 0_u32
+      build = 0_u32
+      Ntdll.RtlGetNtVersionNumbers(pointerof(major), pointerof(minor), pointerof(build))
+      # The build number has a high bit set for release builds, mask it out
+      build &= 0x7FFF_FFFF
+      {major.to_i32, minor.to_i32, build.to_i32}
+    rescue
+      # If Windows API call fails, return nil
+      nil
     end
   {% end %}
 end

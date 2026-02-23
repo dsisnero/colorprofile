@@ -64,18 +64,28 @@ module Colorprofile
       slice.size.to_i64
     end
 
+    # ameba:disable Metrics/CyclomaticComplexity
     private def handle_sgr(parser : Ansi::Parser, buffer : IO::Memory)
       style_attrs = [] of String
       params_len = parser.params_len
 
       i = 0
       while i < params_len
-        p, _ = parser.param(i, 0)
+        p, _more = parser.param(i, 0)
+
+        if p == Ansi::ParserTransition::MissingParam
+          # Missing parameter (sentinel value)
+          style_attrs << ""
+          i += 1
+          next
+        end
 
         case p
         when 0
-          # SGR default parameter is 0. Reset all attributes.
-          style_attrs = [] of String
+          # SGR default parameter is 0. Append empty string to produce leading semicolon.
+          style_attrs << ""
+          i += 1
+          next
         when 30, 31, 32, 33, 34, 35, 36, 37 # 8-bit foreground color
           if @profile < Profile::ANSI
             i += 1
@@ -87,38 +97,40 @@ module Colorprofile
           end
         when 38 # 16 or 24-bit foreground color
           if @profile < Profile::ANSI
-            i += 1
-            next
-          end
-          # Parse 256 or true color from params
-          if i + 1 < params_len
-            color_type = parser.param(i + 1, 0)[0]
-            case color_type
-            when 5 # 256 color
-              if i + 2 < params_len
-                color_val = parser.param(i + 2, 0)[0]
-                color = Ansi::IndexedColor.new(color_val.to_u8)
-                converted = @profile.convert(color)
-                if converted
-                  style_attrs << color_to_sgr(converted, :foreground)
+            # Parse color to know how many parameters to skip
+            slice = parser.params[i, params_len - i]
+            params_slice = Ansi.to_params(slice)
+            n, _ = Ansi.read_style_color(params_slice)
+            if n > 0
+              i += n
+              next
+            else
+              # Fallback to old skip logic
+              if i + 1 < params_len
+                color_type = parser.param(i + 1, 0)[0]
+                case color_type
+                when 5 # 256 color
+                  i += 3 if i + 2 < params_len
+                when 2 # True color (RGB)
+                  i += 5 if i + 4 < params_len
+                else
+                  i += 1
                 end
-                i += 2
-                next
               end
-            when 2 # True color (RGB)
-              if i + 4 < params_len
-                r = parser.param(i + 2, 0)[0]
-                g = parser.param(i + 3, 0)[0]
-                b = parser.param(i + 4, 0)[0]
-                color = Ansi::Color.new(r.to_u8, g.to_u8, b.to_u8)
-                converted = @profile.convert(color)
-                if converted
-                  style_attrs << color_to_sgr(converted, :foreground)
-                end
-                i += 4
-                next
-              end
+              next
             end
+          end
+          # Parse color using ANSI library (supports ITU format)
+          slice = parser.params[i, params_len - i]
+          params_slice = Ansi.to_params(slice)
+          n, color = Ansi.read_style_color(params_slice)
+          if n > 0 && color
+            converted = @profile.convert(color)
+            if converted
+              style_attrs << color_to_sgr(converted, :foreground)
+            end
+            i += n
+            next
           end
         when 39 # default foreground color
           if @profile < Profile::ANSI
@@ -137,36 +149,40 @@ module Colorprofile
           end
         when 48 # 16 or 24-bit background color
           if @profile < Profile::ANSI
-            i += 1
-            next
-          end
-          # Parse 256 or true color from params
-          if i + 1 < params_len
-            color_type = parser.param(i + 1, 0)[0]
-            case color_type
-            when 5 # 256 color
-              if i + 2 < params_len
-                color_val = parser.param(i + 2, 0)[0]
-                color = Ansi::IndexedColor.new(color_val.to_u8)
-                converted = @profile.convert(color)
-                if converted
-                  style_attrs << color_to_sgr(converted, :background)
+            # Parse color to know how many parameters to skip
+            slice = parser.params[i, params_len - i]
+            params_slice = Ansi.to_params(slice)
+            n, _ = Ansi.read_style_color(params_slice)
+            if n > 0
+              i += n
+              next
+            else
+              # Fallback to old skip logic
+              if i + 1 < params_len
+                color_type = parser.param(i + 1, 0)[0]
+                case color_type
+                when 5 # 256 color
+                  i += 3 if i + 2 < params_len
+                when 2 # True color (RGB)
+                  i += 5 if i + 4 < params_len
+                else
+                  i += 1
                 end
-                i += 2
               end
-            when 2 # True color (RGB)
-              if i + 4 < params_len
-                r = parser.param(i + 2, 0)[0]
-                g = parser.param(i + 3, 0)[0]
-                b = parser.param(i + 4, 0)[0]
-                color = Ansi::Color.new(r.to_u8, g.to_u8, b.to_u8)
-                converted = @profile.convert(color)
-                if converted
-                  style_attrs << color_to_sgr(converted, :background)
-                end
-                i += 4
-              end
+              next
             end
+          end
+          # Parse color using ANSI library (supports ITU format)
+          slice = parser.params[i, params_len - i]
+          params_slice = Ansi.to_params(slice)
+          n, color = Ansi.read_style_color(params_slice)
+          if n > 0 && color
+            converted = @profile.convert(color)
+            if converted
+              style_attrs << color_to_sgr(converted, :background)
+            end
+            i += n
+            next
           end
         when 49 # default background color
           if @profile < Profile::ANSI
@@ -176,36 +192,40 @@ module Colorprofile
           style_attrs << "49"
         when 58 # 16 or 24-bit underline color
           if @profile < Profile::ANSI
-            i += 1
-            next
-          end
-          # Parse 256 or true color from params
-          if i + 1 < params_len
-            color_type = parser.param(i + 1, 0)[0]
-            case color_type
-            when 5 # 256 color
-              if i + 2 < params_len
-                color_val = parser.param(i + 2, 0)[0]
-                color = Ansi::IndexedColor.new(color_val.to_u8)
-                converted = @profile.convert(color)
-                if converted
-                  style_attrs << color_to_sgr(converted, :underline)
+            # Parse color to know how many parameters to skip
+            slice = parser.params[i, params_len - i]
+            params_slice = Ansi.to_params(slice)
+            n, _ = Ansi.read_style_color(params_slice)
+            if n > 0
+              i += n
+              next
+            else
+              # Fallback to old skip logic
+              if i + 1 < params_len
+                color_type = parser.param(i + 1, 0)[0]
+                case color_type
+                when 5 # 256 color
+                  i += 3 if i + 2 < params_len
+                when 2 # True color (RGB)
+                  i += 5 if i + 4 < params_len
+                else
+                  i += 1
                 end
-                i += 2
               end
-            when 2 # True color (RGB)
-              if i + 4 < params_len
-                r = parser.param(i + 2, 0)[0]
-                g = parser.param(i + 3, 0)[0]
-                b = parser.param(i + 4, 0)[0]
-                color = Ansi::Color.new(r.to_u8, g.to_u8, b.to_u8)
-                converted = @profile.convert(color)
-                if converted
-                  style_attrs << color_to_sgr(converted, :underline)
-                end
-                i += 4
-              end
+              next
             end
+          end
+          # Parse color using ANSI library (supports ITU format)
+          slice = parser.params[i, params_len - i]
+          params_slice = Ansi.to_params(slice)
+          n, color = Ansi.read_style_color(params_slice)
+          if n > 0 && color
+            converted = @profile.convert(color)
+            if converted
+              style_attrs << color_to_sgr(converted, :underline)
+            end
+            i += n
+            next
           end
         when 59 # default underline color
           if @profile < Profile::ANSI
@@ -233,7 +253,12 @@ module Colorprofile
           end
         else
           # If this is not a color attribute, just append it as a string.
-          style_attrs << p.to_s
+          raw = parser.params[i]
+          if (raw & Int32::MAX) == Int32::MAX
+            style_attrs << ""
+          else
+            style_attrs << p.to_s
+          end
         end
 
         i += 1
@@ -243,12 +268,17 @@ module Colorprofile
       buffer << style.to_s
     end
 
+    # ameba:disable Metrics/CyclomaticComplexity
     private def color_to_sgr(color : Ansi::PaletteColor, type : Symbol) : String
       case type
       when :foreground
         case color
         when Ansi::BasicColor
-          (30 + color.value).to_s
+          if color.value < 8
+            (30 + color.value).to_s
+          else
+            (90 + (color.value - 8)).to_s
+          end
         when Ansi::IndexedColor
           "38;5;#{color.value}"
         when Ansi::Color
@@ -259,7 +289,11 @@ module Colorprofile
       when :background
         case color
         when Ansi::BasicColor
-          (40 + color.value).to_s
+          if color.value < 8
+            (40 + color.value).to_s
+          else
+            (100 + (color.value - 8)).to_s
+          end
         when Ansi::IndexedColor
           "48;5;#{color.value}"
         when Ansi::Color
